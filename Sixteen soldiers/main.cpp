@@ -19,52 +19,52 @@
 #define HARD    6
 using namespace std;
 
-// used to create the suggestion vectors
-struct st_suggestions
+
+struct st_suggestions //используется для создания векторов предложения
 {
     int suggest_x, suggest_y;
     bool suggest_is_captured;
 };
-// stores the 4 coordinates for each of the 3 menu rectangles (Easy, Medium, Hard)
+//сохраняет 4 координаты для каждого из 3 кнопок меню (простое, среднее, сложное).
 vector<pair<int, int> > quad[] = { { {-2, 5}, {-2, 4}, {1, 4}, {1, 5} },
                                    { {-2, 3}, {-2, 2}, {1, 2}, {1, 3} },
                                    { {-2, 1}, {-2, 0}, {1, 0}, {1, 1} } };
-// starting menu text array
+//текстовый массив стартового меню с выбором уровня бота
 string menu_string[] = { "Select difficulty", "Easy", "Medium", "Hard" };
 
-// starting menu text coordinates
+//координаты текста начального меню
 vector<pair<float, float> > menu_text_coordinate = { {-1.8, 6}, {-1, 4.3}, {-1.2, 2.3}, {-1, 0.3} };
 
-// stores the 4 coordinates for play again rectangle
+//сохраняет 4 координаты для воспроизведения кнопки начать заново
 vector<pair<int, int> > play_again = { {-2, 10}, {-2, 9}, {2, 9}, {2, 10} };
 
-// play again string text coordinate
+// координаты текста когда предлагается начать заново
 pair<float, float> play_again_text_coordinate = { -2.2, 9.3 };
 
-vector<pair<int, int> > points;                         // stores all valid points that make the board
-vector<pair<int, int> > line_start, line_end;           // line_start stores coordinates of lines' starting points && line_end stores ending points respectively
-map<int, map<int, bool> > is_valid_point;               // is_valid_point[x][y] returns true if (x,y) coordinate is a valid point inside the board
-map<int, map<int, map<int, map<int, bool> > > > adj;    // adjacency matrix - adj[][][][] = boolean, stores the connections between the adjacent points
-map<int, map<int, int> > mark;                          // 0 for none, 1 for red, 2 for blue
-vector<pair<int, int> > red_soldiers, blue_soldiers;    // stores the alive soldiers' coordinates
-vector<struct st_suggestions> suggestions;              // stores the possible moves for the selected soldier
+vector<pair<int, int> > points;                         // сохраняет все действительные очки, из которых состоит игровое поле
+vector<pair<int, int> > line_start, line_end;           // line_start хранит координаты начальных точек линий, а line_end - конечных точек соответственно
+map<int, map<int, bool> > is_valid_point;               // is_valid_point[x][y] возвращает значение true, если координата (x,y) является допустимой точкой внутри игрового поля
+map<int, map<int, map<int, map<int, bool> > > > adj;    // матрица смежности - adj[][][][] = логическое значение, сохраняет связи между соседними точками
+map<int, map<int, int> > mark;                          // 0 - нет, 1 - красный, 2 - синий
+vector<pair<int, int> > red_soldiers, blue_soldiers;    // сохраняет координаты живых солдат
+vector<struct st_suggestions> suggestions;              // сохраняет возможные ходы для выбранного солдата
 
-int x, y;                                               // stores the coordinate of soldier to move
-int difficulty;                                         // stores the difficulty level of the game
-int fromX, fromY, toX, toY;                             // used to draw lines from (fromX, fromY) to (toX, toY)
-int text_x = -2, text_y = -9;                           // turning texts will be printed at this coordinate
-int winHeight = 900, winWidth = 1200;                   // console window size
-int partial_area = 8;                                   // increasing this value decreases the partial area of soldier selection coordinate
-int turn;                                               // indicates whose turn it is
-int game_won;                                           // indicates who won the game, initially none
-int hX, hY;                                             // highlighted coordinate
-int count_blue_soldier, count_red_soldier;              // number of alive soldiers
-int minimax_depth_limit;                                // stores the depth limit of forward checking of minimax algorithm
-bool is_red_moving;                                     // indicates if moving indicator needs to be drawn
-bool is_check_game_status;                              // indicates if checking game status is required
-bool is_highlighted;                                    // stores the highlighted status
-bool is_captured;                                       // stores the captured status
-bool is_game_started = false;                           // used to select difficulty level
+int x, y;                                               // сохраняет координаты солдата, которого нужно переместить
+int difficulty;                                         // сохраняет уровень сложности игры
+int fromX, fromY, toX, toY;                             // используется для рисования линий от (fromX, fromY) до (toX, toY)
+int text_x = -2, text_y = -9;                           // поворотные тексты будут напечатаны по этой координате
+int winHeight = 900, winWidth = 1200;                   // размер окна консоли
+int partial_area = 8;                                   // увеличение этого значения уменьшает частичную область координат выбора солдата
+int turn;                                               // указывает, чья сейчас очередь
+int game_won;                                           // указывает, кто выиграл игру, изначально никто
+int hX, hY;                                             // выделенная координата
+int count_blue_soldier, count_red_soldier;              // количество живых солдат
+int minimax_depth_limit;                                // сохраняет предел глубины прямой проверки минимаксного алгоритма
+bool is_red_moving;                                     // указывает, нужно ли рисовать движущийся индикатор
+bool is_check_game_status;                              // указывает, требуется ли проверять статус игры
+bool is_highlighted;                                    // сохраняет выделенный статус
+bool is_captured;                                       // сохраняет захваченный статус
+bool is_game_started = false;                           // используется для выбора уровня сложности
 
 int  reCalculate(int, int);
 void mouse(int, int, int, int);
@@ -91,39 +91,30 @@ void draw_text();
 void draw_game_over();
 
 int main(int argc, char* argv[]) {
+    glutInit(&argc, argv); //initialize GLUT, using any commandline parameters passed to the program
 
-    /* initialize GLUT, using any commandline parameters passed to the
-       program */
-    glutInit(&argc, argv);
-
-    /* setup the size, position, and display mode for new windows */
-    glutInitWindowSize(winWidth, winHeight);
-    glutInitWindowPosition(500, 50);
-    glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
-
-    /* create and set up a window */
+    glutInitWindowSize(winWidth, winHeight); //установка размера окна
+    glutInitWindowPosition(500, 50); //установка положения окна на экране
+    glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE); //установка мода отображения окна
     glutCreateWindow("Sixteen soldiers");
-
     glutMouseFunc(mouse);
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
-
-    glClearColor(0.0f, 0.5f, 1.0f, 1.0f);
-    /* tell GLUT to wait for events */
+    glClearColor(0.4f, 0.4f, 0.4f, 0.1f); //установка цвета фона окна 
+    
     glutMainLoop();
 }
 
 int reCalculate(int a, int sz)
 {
-    float b1;
-    int mid, b2, area;
-    mid = sz / 10 / 2;
-    area = winWidth / 10 / partial_area;
+    float b1; // Объявление переменной типа float для хранения промежуточного значения.
+    int mid, b2, area; // Объявление целочисленных переменных mid (среднее значение), b2 (округленное значение) и area (площадь).
+    mid = sz / 10 / 2; // Вычисление среднего значения
+    area = winWidth / 10 / partial_area; // Вычисление площади
 
-    b1 = (float)a / mid;
-    //b2 = round(b1);
-    b2 = static_cast<int>(round(b1));
-    if (abs(b2 * mid - a) <= area) return b2;
+    b1 = (float)a / mid; // Деление переменной a на значение mid и преобразование результата в тип float
+    b2 = static_cast<int>(round(b1)); // Округление значения b1 до ближайшего целого числа с помощью функции round()
+    if (abs(b2 * mid - a) <= area) return b2; // Проверка, если разница между произведением b2(b2 * mid - a) <= area) return b2;
     return INF;
 }
 
@@ -131,23 +122,20 @@ void mouse(int button, int state, int mousex, int mousey)
 {
     int tempx, tempy;
 
-    // during the difficulty level selection we need PROJECTION mode coordinate
-    // so conversion is not needed here
-    if (!is_game_started || turn == NONE)
+    if (!is_game_started || turn == NONE)// при выборе уровня сложности нам нужны координаты режима проекции
     {
         x = mousex;
         y = mousey;
         return;
     }
 
-    // during the game we need MODELVIEW mode coordinate
-    // so conversion is needed here
-    if (turn == BLUE && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+
+    if (turn == BLUE && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) // во время игры нам нужны координаты в режиме просмотра модели и здесь требуется преобразование
     {
         tempx = mousex - (winWidth / 2);
         tempy = (winHeight / 2) - mousey;
 
-        // convert the mousex, mousey coordinate into MODELVIEW matrix mode
+        // преобразовать курсор мыши в матричный режим MODELVIEW
         x = reCalculate(tempx, winWidth);
         y = reCalculate(tempy, winHeight);
     }
@@ -155,23 +143,22 @@ void mouse(int button, int state, int mousex, int mousey)
 
 void initialize()
 {
-    srand(time(NULL));
-    //srand(static_cast<unsigned int>(time(NULL)));
+    srand(time(NULL)); //Инициализация генератора случайных чисел с использованием текущего времени
 
+    red_soldiers.clear(); // Очистка контейнера red_soldiers, подготовка структуры данных для новой игры (красные это бот)
+    blue_soldiers.clear(); // Очистка контейнера blue_soldiers, подготовка структуры данных для новой игры (синий это пользователькоторый будет играть)
+    mark.clear(); //Очистка данных кто будет ходить
 
-    red_soldiers.clear();
-    blue_soldiers.clear();
-    mark.clear();
+    turn = BLUE;  // Установка начального хода на синюю команду
+    game_won = NONE; // Переменная в которую записывает кто выйграл (в начале устанавливается что никто не выйграл)
+    count_blue_soldier = 16; // Количество солдат синей команды 
+    count_red_soldier = 16; // Количество солдат красной команды 
+    is_red_moving = false; // Флаг движения красной команды 
+    is_check_game_status = false; // Проверка статуса игры
+    is_highlighted = false; // Проверка подсветки на игровом поле
+    is_captured = false; // Проверка захвата фигуры (солдатика)
 
-    turn = BLUE;
-    game_won = NONE;
-    count_blue_soldier = 16;
-    count_red_soldier = 16;
-    is_red_moving = false;
-    is_check_game_status = false;
-    is_highlighted = false;
-    is_captured = false;
-
+    // Добавление точек для размещения поля на котором будут размещены солдатики
     points.push_back({ -4, 8 });
     points.push_back({ 0, 8 });
     points.push_back({ 4, 8 });
@@ -218,9 +205,9 @@ void initialize()
     points.push_back({ 0, -8 });
     points.push_back({ 4, -8 });
 
+    // Отрисовка линий по которым будут ходить солдатики
     for (auto& i : points)
         is_valid_point[i.first][i.second] = true;
-
     line_start.push_back({ -4, 8 });
     line_end.push_back({ 0, 8 });
 
@@ -473,12 +460,13 @@ void initialize()
     line_start.push_back({ 0,-6 });
     line_end.push_back({ 2,-6 });
 
+    // Добавление солдатиков на поле (красная команда)
     for (int i = 0; i < (int)line_start.size(); i++)
     {
         adj[line_start[i].first][line_start[i].second][line_end[i].first][line_end[i].second] = true;
         adj[line_end[i].first][line_end[i].second][line_start[i].first][line_start[i].second] = true;
     }
-
+    
     red_soldiers.push_back({ -4, 8 });
     red_soldiers.push_back({ 0, 8 });
     red_soldiers.push_back({ 4, 8 });
@@ -498,7 +486,7 @@ void initialize()
     red_soldiers.push_back({ 0, 2 });
     red_soldiers.push_back({ 2, 2 });
     red_soldiers.push_back({ 4, 2 });
-
+    // Добавление солдатиков на поле (синяя команда)
     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
         mark[it->first][it->second] = RED;
 
@@ -521,18 +509,18 @@ void initialize()
     blue_soldiers.push_back({ -4, -8 });
     blue_soldiers.push_back({ 0, -8 });
     blue_soldiers.push_back({ 4, -8 });
-
+    //Цикл для установки солат на поле 
     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
         mark[it->first][it->second] = BLUE;
 }
 
 void select_difficulty()
 {
-    int x_min, x_max, y_min, y_max, diff, height, width;
-    width = winWidth / 10 / 2;
-    height = winHeight / 10 / 2;
+    int x_min, x_max, y_min, y_max, diff, height, width; // Объявление переменных для хранения координат, разницы, высоты и ширины
+    width = winWidth / 10 / 2; // Вычисление ширины области для отображения
+    height = winHeight / 10 / 2; // Вычисление высоты области для отображения
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) //Цикл для отрисовки выбора уровней сложности бота
     {
         x_min = quad[i][0].first, x_max = quad[i][2].first;
         y_min = quad[i][3].second, y_max = quad[i][1].second;
@@ -541,6 +529,7 @@ void select_difficulty()
         y_min = (winHeight / 2) - (y_min * height);
         y_max = (winHeight / 2) - (y_max * height);
 
+        // Устанавливаем уровень сложности игры в зависимости от значения diff и устанавливаем максимальную глубину поиска для алгоритма minimax.
         if (x_min <= x && x <= x_max && y_min <= y && y <= y_max)
         {
             diff = i + 4;
@@ -548,11 +537,11 @@ void select_difficulty()
             if (diff == 5) difficulty = MEDIUM, minimax_depth_limit = 2;
             if (diff == 6) difficulty = HARD, minimax_depth_limit = 4;
 
-            is_game_started = true;
+            is_game_started = true; //Флаг того что игра началась  
             break;
         }
     }
-    if (is_game_started)
+    if (is_game_started) // Условие при котором если игра началсь то обновляем экран, вызывая перерисовку в OpenGL.
     {
         glutPostRedisplay();
     }
@@ -560,6 +549,7 @@ void select_difficulty()
 
 void select_play_again()
 {
+    //Отрисовка кнопки Начать заново 
     int x_min, x_max, y_min, y_max, height, width;
     width = winWidth / 10 / 2;
     height = winHeight / 10 / 2;
@@ -577,61 +567,59 @@ void select_play_again()
 
 void display() {
 
-    /* clear window */
-    glClear(GL_COLOR_BUFFER_BIT);
-    glLoadIdentity();
-    winHeight = glutGet(GLUT_WINDOW_HEIGHT);
+    glClear(GL_COLOR_BUFFER_BIT); //Очистка экрана
+    glLoadIdentity(); // Сброс текущей матрицы
+    // Установка окна по заданным размерам
+    winHeight = glutGet(GLUT_WINDOW_HEIGHT); 
     winWidth = glutGet(GLUT_WINDOW_WIDTH);
 
     if (!is_game_started)
     {
-        // choose difficulty level
+        // выберите уровень сложности
         draw_difficulty_section();
         select_difficulty();
         if (is_game_started) initialize();
     }
     else
     {
-        // difficulty level is selected. Main game will run here
-
+        // выбран уровень сложности. Основная игра будет проходить здесь
         if (turn == BLUE)
         {
-            user_move();
-            if (is_check_game_status) check_game_status();
+            user_move(); //Ход игрока
+            if (is_check_game_status) check_game_status(); //Проверка статуса игры
         }
         else if (turn == RED && !is_red_moving)
         {
-            opponent_move();
-            if (is_check_game_status) check_game_status();
+            opponent_move(); //Ход бота
+            if (is_check_game_status) check_game_status();//Проверка статуса игры
             
         }
-
+        // Отображения игрового поля в окне
         draw_points();
         draw_lines();
         draw_team_red();
         draw_team_blue();
         if (is_red_moving)
         {
-            draw_move_indicator_line();
+            draw_move_indicator_line();// Отображение линии когда бот ходит
             is_red_moving = false;
         }
-        draw_text();
+        draw_text(); // Отображения текста кто в данный момент ходит 
         if (is_highlighted) draw_highlighted_point();
         if (is_highlighted && turn == BLUE) draw_suggested_points();
         if (turn == NONE)
         {
-            draw_game_over();
-            select_play_again();
+            draw_game_over(); // Отрисовка проигрыша или выйгрыша игрока
+            select_play_again(); // Отрисовка кнопки начать заново
         }
-    }
-    /* flush drawing routines to the window */
-    
+    }   
     glFlush();
 
 }
 
 void reshape(int w, int h)
 {
+    // Настройки перерисовки поля когда одна из команд выполнила ход
     glViewport(0, 0, w, h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -664,9 +652,9 @@ void shuffle_vector(bool shuffle_red_soldiers, bool shuffle_suggestions)
 
 void suggest_moves(int x1, int y1, int opposite, bool capture)
 {
-    // last 2 direction values are for uppermost and lowermost row
-   // these 2 values doesn't effect other rows
-   // adj matrix handles this case
+    // последние 2 значения направления относятся к самой верхней и самой нижней строкам
+    // эти 2 значения не влияют на другие строки
+    // в этом случае используется матрица adj
     int fx[] = { 2, -2, 0,  0, 2,  2, -2, -2, 4, -4 };
     int fy[] = { 0,  0, 2, -2, 2, -2, -2,  2, 0,  0 };
     int tx1, tx2, ty1, ty2;
@@ -680,16 +668,16 @@ void suggest_moves(int x1, int y1, int opposite, bool capture)
         tx2 = tx1 + fx[i];
         ty2 = ty1 + fy[i];
 
-        // works only when it's soldier's first move of a new turn
-        // suggests a normal move. can't capture opponent's soldier
+        // работает, только если это первый ход солдата в новом ходе
+        // предлагает обычный ход. невозможно захватить солдата противника
         if (!capture)
         {
             if (mark[tx1][ty1] == NONE && adj[x1][y1][tx1][ty1])
                 suggestions.push_back({ tx1, ty1, 0 });
         }
 
-        // works both in first move and further
-        // suggests a possible capturing move
+        // работает как на первом ходу, так и на последующих
+        // предполагает возможный захват
         if (mark[tx2][ty2] == NONE
             && adj[x1][y1][tx1][ty1] && adj[tx1][ty1][tx2][ty2]
             && mark[tx1][ty1] == opposite)
@@ -705,14 +693,14 @@ void user_move()
 
     if (!is_captured && mark[x][y] == BLUE)
     {
-        // highlights this coordinate
+        // выделяет эту координату
         hX = x, hY = y;
         is_highlighted = true;
         suggest_moves(x, y, RED, is_captured);
     }
     else
     {
-        // check if clicked coordinate is included in the suggestion list
+        // проверьте, включена ли выбранная координата в список предложений
         for (auto it = suggestions.begin(); it != suggestions.end(); it++)
         {
             if (it->suggest_x == x && it->suggest_y == y)
@@ -727,9 +715,8 @@ void user_move()
         {
             if (!is_capturing_move)
             {
-                /// normal move
-
-                // shift the highlighted soldier to new coordinate
+                // обычный ход
+                 // переместите выделенного солдата на новую координату
                 for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                 {
                     if (it->first == hX && it->second == hY)
@@ -748,9 +735,8 @@ void user_move()
             }
             else
             {
-                /// capturing move
-
-                // shift highlighted soldier to new coordinate
+                // захват хода
+                // переместить выделенного солдата на новую координату
                 for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                 {
                     if (it->first == hX && it->second == hY)
@@ -762,7 +748,7 @@ void user_move()
                 mark[hX][hY] = NONE;
                 mark[x][y] = BLUE;
 
-                // delete the opponent soldier from the middle
+                // удалить солдата противника из середины
                 midx = (x + hX) / 2;
                 midy = (y + hY) / 2;
                 mark[midx][midy] = NONE;
@@ -802,7 +788,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
 
     int res{}, ans, deleted_position, oldX, oldY, newX = 0, newY = 0, midX, midY;
 
-    if (turn == RED)             // RED tries to maximize
+    if (turn == RED)             
     {
         res = -INF;
 
@@ -811,13 +797,13 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
             if (capture && (i.first != xcord || i.second != ycord)) continue;
 
             suggest_moves(i.first, i.second, BLUE, capture);
-            // shuffle suggestions vector
+            // вектор предложений в случайном порядке
             shuffle_vector(false, true);
             vector<struct st_suggestions> copy_suggestions = suggestions;
 
             if (capture && !(int)copy_suggestions.size())
             {
-                ans = minimax(false, level + 1, BLUE, false, newX, newY, dead_red, dead_blue);           /// minimax call
+                ans = minimax(false, level + 1, BLUE, false, newX, newY, dead_red, dead_blue); 
                 if (ans >= res)
                 {
                     res = ans;
@@ -836,14 +822,13 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
 
                 if (j.suggest_is_captured)
                 {
-                    /// for capturing move
-
+                    // для захвата хода
                     midX = (oldX + newX) / 2, midY = (oldY + newY) / 2;
                     mark[oldX][oldY] = NONE;
                     mark[midX][midY] = NONE;
                     mark[newX][newY] = RED;
 
-                    // shift (oldX, oldY) to (newX, newY)
+                    // изменить (oldX, oldY) на (newX, newY)
                     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
                     {
                         if (it->first == oldX && it->second == oldY)
@@ -854,7 +839,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                         }
                     }
 
-                    // delete (midX, midY) from blue_soldiers vector
+                    // удалить (midX, midY) из вектора blue_soldiers
                     deleted_position = 0;
                     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                     {
@@ -883,7 +868,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                     mark[midX][midY] = BLUE;
                     mark[newX][newY] = NONE;
 
-                    // shift (newX, newY) to (oldX, oldY)
+                    // изменить (newX, newY) на (oldX, oldY)
                     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
                     {
                         if (it->first == newX && it->second == newY)
@@ -894,18 +879,18 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                         }
                     }
 
-                    // put (midX, midY) back in the blue_soldiers vector
+                    // поместите (midX, midY) обратно в вектор blue_soldiers
                     blue_soldiers.insert(blue_soldiers.begin() + deleted_position, { midX, midY });
                     count_blue_soldier++;
                 }
                 else
                 {
-                    /// for non capturing move
+                    // для перемещения без захвата
 
                     mark[oldX][oldY] = NONE;
                     mark[newX][newY] = RED;
 
-                    // shift (oldX, oldY) to (newX, newY)
+                    // изменить (oldX, oldY) на (newX, newY)
                     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
                     {
                         if (it->first == oldX && it->second == oldY)
@@ -916,7 +901,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                         }
                     }
 
-                    ans = minimax(false, level + 1, BLUE, false, newX, newY, dead_red, dead_blue);        /// minimax call
+                    ans = minimax(false, level + 1, BLUE, false, newX, newY, dead_red, dead_blue);  
                     if (ans > res)
                     {
                         res = ans;
@@ -932,7 +917,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                     mark[oldX][oldY] = RED;
                     mark[newX][newY] = NONE;
 
-                    // shift (newX, newY) to (oldX, oldY)
+                    // изменить (newX, newY) на (oldX, oldY)
                     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
                     {
                         if (it->first == newX && it->second == newY)
@@ -946,11 +931,11 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
             }
         }
 
-        // in case of TIE
+        // в случае НИЧЬЕЙ
         if (res == -INF) res = (dead_blue - dead_red * 2);
     }
 
-    if (turn == BLUE)            // BLUE tries to minimize
+    if (turn == BLUE)          
     {
         res = INF;
 
@@ -963,7 +948,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
 
             if (capture && !(int)copy_suggestions.size())
             {
-                ans = minimax(false, level + 1, RED, false, newX, newY, dead_red, dead_blue);           /// minimax call
+                ans = minimax(false, level + 1, RED, false, newX, newY, dead_red, dead_blue);           
                 if (ans <= res) res = ans;
             }
 
@@ -974,14 +959,14 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
 
                 if (j.suggest_is_captured)
                 {
-                    /// for capturing move
+                    // для захвата хода
 
                     midX = (oldX + newX) / 2, midY = (oldY + newY) / 2;
                     mark[oldX][oldY] = NONE;
                     mark[midX][midY] = NONE;
                     mark[newX][newY] = BLUE;
 
-                    // shift (oldX, oldY) to (newX, newY)
+                    // изменить (oldX, oldY) на (newX, newY)
                     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                     {
                         if (it->first == oldX && it->second == oldY)
@@ -992,7 +977,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                         }
                     }
 
-                    // delete (midX, midY) from red vector
+                    // удалить (midX, midY) для красного vector
                     deleted_position = 0;
                     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
                     {
@@ -1005,14 +990,14 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                     }
                     count_red_soldier--;
 
-                    ans = minimax(false, level, BLUE, true, newX, newY, dead_red + 1, dead_blue);        /// minimax call
+                    ans = minimax(false, level, BLUE, true, newX, newY, dead_red + 1, dead_blue);     
                     if (ans <= res) res = ans;
 
                     mark[oldX][oldY] = BLUE;
                     mark[midX][midY] = RED;
                     mark[newX][newY] = NONE;
 
-                    // shift (newX, newY) to (oldX, oldY)
+                    // изменить (newX, newY) на (oldX, oldY)
                     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                     {
                         if (it->first == newX && it->second == newY)
@@ -1023,18 +1008,18 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                         }
                     }
 
-                    // put (midX, midY) back in the red_soldiers vector
+                    // поместить (midX, midY) обратно в red_soldiers vector
                     red_soldiers.insert(red_soldiers.begin() + deleted_position, { midX, midY });
                     count_red_soldier++;
                 }
                 else
                 {
-                    /// for non capturing move
+                    // для перемещения без захвата
 
                     mark[oldX][oldY] = NONE;
                     mark[newX][newY] = BLUE;
 
-                    // shift (oldX, oldY) to (newX, newY)
+                    // изменить (oldX, oldY) на (newX, newY)
                     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                     {
                         if (it->first == oldX && it->second == oldY)
@@ -1045,13 +1030,13 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
                         }
                     }
 
-                    ans = minimax(false, level + 1, RED, false, newX, newY, dead_red, dead_blue);        /// minimax call
+                    ans = minimax(false, level + 1, RED, false, newX, newY, dead_red, dead_blue);  
                     if (ans < res) res = ans;
 
                     mark[oldX][oldY] = BLUE;
                     mark[newX][newY] = NONE;
 
-                    // shift (newX, newY) to (oldX, oldY)
+                    // изменить (newX, newY) на (oldX, oldY)
                     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
                     {
                         if (it->first == newX && it->second == newY)
@@ -1065,7 +1050,7 @@ int minimax(bool is_first_iteration, int level, int turn, bool capture, int xcor
             }
         }
 
-        // in case of TIE
+        // в случаи ничьи
         if (res == INF) res = (dead_blue - dead_red * 2);
     }
 
@@ -1076,13 +1061,13 @@ void opponent_move()
 {
     int midX, midY;
 
-    // shuffle red_soldiers vector
+    // перетасовать вектор red_soldiers в случайном порядке
     shuffle_vector(true, false);
-    minimax(true, 0, RED, is_captured, x, y, 0, 0);         /// minimax call
+    minimax(true, 0, RED, is_captured, x, y, 0, 0);
 
     if (!is_captured)
     {
-        /// non capturing move
+        // движение без захвата
 
         mark[fromX][fromY] = NONE;
         mark[toX][toY] = RED;
@@ -1090,7 +1075,7 @@ void opponent_move()
         is_red_moving = true;
         display();
 
-        // shift (fromX, fromY) to (toX, toY)
+        // изменить (fromX, fromY) на (toX, toY)
         for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
         {
             if (it->first == fromX && it->second == fromY)
@@ -1106,7 +1091,7 @@ void opponent_move()
     }
     else if (is_captured)
     {
-        /// capturing move
+        // захватывающий ход
 
         if (toX == INF)
         {
@@ -1126,7 +1111,7 @@ void opponent_move()
         is_red_moving = true;
         display();
 
-        // shift (fromX, fromY) to (toX, toY)
+        // изменить (fromX, fromY) на (toX, toY)
         for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
         {
             if (it->first == fromX && it->second == fromY)
@@ -1137,7 +1122,7 @@ void opponent_move()
             }
         }
 
-        // delete (midX, midY) from blue_soldiers vector
+        // удалить (midX, midY) у blue_soldiers vector
         for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
         {
             if (it->first == midX && it->second == midY)
@@ -1148,7 +1133,7 @@ void opponent_move()
         }
         count_blue_soldier--;
 
-        // next minimax will start from (x, y)
+        // следующий minimai будет начинаться с (x, y)
         x = toX, y = toY;
         toX = toY = INF;
     }
@@ -1162,7 +1147,7 @@ void check_game_status()
     bool red_ok, blue_ok;
     red_ok = blue_ok = false;
 
-    // check if any move is possible for RED
+    // проверьте, возможен ли какой-либо ход для красного
     for (auto it = red_soldiers.begin(); it != red_soldiers.end(); it++)
     {
         suggest_moves(it->first, it->second, BLUE, false);
@@ -1173,7 +1158,7 @@ void check_game_status()
         }
     }
 
-    // check if any move is possible for BLUE
+    // проверьте, возможен ли какой-либо ход для синего
     for (auto it = blue_soldiers.begin(); it != blue_soldiers.end(); it++)
     {
         suggest_moves(it->first, it->second, RED, false);
@@ -1184,7 +1169,7 @@ void check_game_status()
         }
     }
     suggestions.clear();
-
+    // ПРоверка какая из команд победит или проиграет 
     if (turn == RED)
     {
         if (!count_red_soldier)
@@ -1218,12 +1203,12 @@ void check_game_status()
 
 void draw_difficulty_section()
 {
-    int len;
+    int len; // Оьтявление переменной длины
 
     glColor3f(0.0, 0.0, 1.0);
     glBegin(GL_QUADS);
 
-    // draw the empty rectangles
+    // нарисуйте пустые прямоугольники
     for (int i = 0; i < 3; i++)
     {
         for (auto it = quad[i].begin(); it != quad[i].end(); it++)
@@ -1232,13 +1217,13 @@ void draw_difficulty_section()
     glEnd();
 
     glColor3f(1.0, 1.0, 1.0);
-    // print "menu_string" array strings
+    // вывести строки массива "menu_string"
     for (int i = 0; i < 4; i++)
     {
         len = (int)menu_string[i].size();
         glRasterPos2f(menu_text_coordinate[i].first, menu_text_coordinate[i].second);
 
-        //loop to display character by character
+        //цикл для отображения символа за символом
         for (int j = 0; j < len; j++)
             glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, menu_string[i][j]);
     }
@@ -1256,8 +1241,8 @@ void draw_points()
 
 void draw_lines()
 {
+    //ОТрисовка линий на поле в окне
     glBegin(GL_LINES);
-    //glColor3f(1.0, 1.0, 1.0);
     glColor3f(1, 1, 1);
     for (int i = 0; i < (int)line_start.size(); i++)
     {
@@ -1270,6 +1255,7 @@ void draw_lines()
 
 void draw_move_indicator_line()
 {
+    // Отрисовка идикатоора направления хода 
     glBegin(GL_LINES);
     glColor3f(1, 0, 0);
     glVertex2f(static_cast<GLfloat>(fromX), static_cast<GLfloat>(fromY));
@@ -1279,6 +1265,7 @@ void draw_move_indicator_line()
 
 void draw_team_red()
 {
+    // Отрисовка красных солатиков
     glPointSize(20.0);
     glBegin(GL_POINTS);
     glColor3f(1, 0, 0);
@@ -1289,6 +1276,7 @@ void draw_team_red()
 
 void draw_team_blue()
 {
+    // Отрисовка команды синих
     glPointSize(20.0);
     glBegin(GL_POINTS);
     glColor3f(0, 0, 1);
@@ -1299,18 +1287,21 @@ void draw_team_blue()
 
 void draw_highlighted_point()
 {
+    // Отрисовка выделенного солдатика
     glPointSize(20.0);
     glBegin(GL_POINTS);
-    glColor3f(static_cast<GLfloat>(0.5), 0, 1);
+    glColor3f(static_cast<GLfloat>(0), 1, 0);
+    //glColor3f(0.0f, 1.0f, 0.0f);
     glVertex2f(static_cast<GLfloat>(hX), static_cast<GLfloat>(hY));
     glEnd();
 }
 
 void draw_suggested_points()
 {
+    // Отрисовка выбора куда будет ходить игрок
     glPointSize(10.0);
     glBegin(GL_POINTS);
-    glColor3f(0.5, 0.0, 1.0);
+    glColor3f(1.0, 1.0, 0.0);
     for (auto it = suggestions.begin(); it != suggestions.end(); it++)
         glVertex2f(static_cast<GLfloat>(it->suggest_x), static_cast<GLfloat>(it->suggest_y));
     glEnd();
@@ -1334,7 +1325,7 @@ void draw_text()
     glRasterPos2f(static_cast<GLfloat>(text_x), static_cast<GLfloat>(text_y));
     len = (int)str.size();
 
-    //loop to display character by character
+    //цикл для отображения символа за символом
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, str[i]);
 }
@@ -1356,7 +1347,7 @@ void draw_game_over()
     glRasterPos2f(play_again_text_coordinate.first, play_again_text_coordinate.second);
     len = (int)str1.size();
 
-    //loop to display character by character
+    //цикл для отображения символа за символом
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, str1[i]);
 
@@ -1372,7 +1363,7 @@ void draw_game_over()
     glRasterPos2f(static_cast<GLfloat>(text_x), static_cast<GLfloat>(text_y));
     len = (int)str2.size();
 
-    //loop to display character by character
+    //цикл для отображения символа за символом
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, str2[i]);
 }
